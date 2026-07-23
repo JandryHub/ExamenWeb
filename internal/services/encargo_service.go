@@ -40,24 +40,65 @@ func NuevoEncargoService(
 // TODO: al crear, el stock del arreglo se descuenta (mire la pantalla 01
 // antes y después de crear un encargo; R5 es la operación inversa).
 func (s *EncargoService) Crear(a *models.Encargo) error {
-	// TODO: implementar.
-	return ErrNoImplementado
+	arreglo, ok := s.arreglos.ObtenerPorID(a.ArregloID)
+	if !ok || !arreglo.Activo {
+		return ErrReferenciaInvalida
+	}
+
+	_, ok = s.clientes.ObtenerPorID(a.ClienteID)
+	if !ok {
+		return ErrReferenciaInvalida
+	}
+
+	if a.Cantidad > arreglo.Stock {
+		return ErrStockInsuficiente
+	}
+
+	total := float64(a.Cantidad) * arreglo.PrecioUnitario
+	if a.Cantidad >= 5 {
+		total = total * 0.9 // 10% de descuento
+	}
+	a.Total = total
+	a.Estado = models.EstadoPendiente
+
+	arreglo.Stock -= a.Cantidad
+	if err := s.arreglos.Actualizar(&arreglo); err != nil {
+		return err
+	}
+
+	return s.encargos.Crear(a)
 }
 
 func (s *EncargoService) ObtenerPorID(id uint) (models.Encargo, error) {
-	// TODO: implementar.
-	return models.Encargo{}, ErrNoImplementado
+	encargo, ok := s.encargos.ObtenerPorID(id)
+	if !ok {
+		return models.Encargo{}, ErrNoEncontrado
+	}
+	return encargo, nil
 }
 
 func (s *EncargoService) Listar() ([]models.Encargo, error) {
-	// TODO: implementar.
-	return nil, ErrNoImplementado
+	return s.encargos.Listar()
 }
 
 // Cancelar cancela un encargo aplicando R4 y R5.
 // TODO (R4): solo se puede cancelar un encargo en estado PENDIENTE.
 // TODO (R5): al cancelar, la cantidad se repone al stock del arreglo.
 func (s *EncargoService) Cancelar(id uint) error {
-	// TODO: implementar.
-	return ErrNoImplementado
+	encargo, ok := s.encargos.ObtenerPorID(id)
+	if !ok {
+		return ErrNoEncontrado
+	}
+	if encargo.Estado != models.EstadoPendiente {
+		return ErrEstadoInvalido
+	}
+
+	arreglo, ok := s.arreglos.ObtenerPorID(encargo.ArregloID)
+	if ok {
+		arreglo.Stock += encargo.Cantidad
+		s.arreglos.Actualizar(&arreglo)
+	}
+
+	encargo.Estado = models.EstadoCancelado
+	return s.encargos.Actualizar(&encargo)
 }

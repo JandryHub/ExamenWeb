@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"errors"
-
 	"gorm.io/gorm"
 
 	"github.com/joancema/examen-floristeria/internal/models"
@@ -23,21 +21,21 @@ func NuevoEncargoGORM(db *gorm.DB) *EncargoGORM {
 }
 
 func (r *EncargoGORM) Crear(a *models.Encargo) error {
-	// TODO: implementar.
-	return errors.New("TODO: implementar Crear")
+	return r.db.Create(a).Error
 }
 
 func (r *EncargoGORM) ObtenerPorID(id uint) (models.Encargo, bool) {
-	// TODO: implementar.
-	return models.Encargo{}, false
+	var a models.Encargo
+	result := r.db.Preload("Arreglo").Preload("Cliente").First(&a, id)
+	return a, result.Error == nil
 }
 
 func (r *EncargoGORM) Listar() ([]models.Encargo, error) {
-	// TODO: implementar.
-	return nil, errors.New("TODO: implementar Listar")
+	var encargos []models.Encargo
+	err := r.db.Preload("Arreglo").Preload("Cliente").Find(&encargos).Error
+	return encargos, err
 }
 
 func (r *EncargoGORM) Actualizar(a *models.Encargo) error {
-	// TODO: implementar.
-	return errors.New("TODO: implementar Actualizar")
+	return r.db.Save(a).Error
 }
